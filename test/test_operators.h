@@ -3,9 +3,34 @@
 
 #define Uses_TEvent
 #define Uses_TKeys
+#define Uses_TColorAttr
 #include <tvision/tv.h>
 
+#include <iomanip>
 #include <ostream>
+
+inline std::ostream &operator<<(std::ostream &os, TColor c)
+{
+    if (c.isBIOS())
+        os << "BIOS 0x" << std::hex << std::uppercase << (unsigned) (uint8_t) c.asBIOS() << std::dec << std::nouppercase;
+    else if (c.isRGB())
+        os << "RGB 0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(6)
+           << (uint32_t) c.asRGB() << std::dec << std::nouppercase << std::setfill(' ');
+    else if (c.isXTerm())
+        os << "XTerm " << (unsigned) (uint8_t) c.asXTerm();
+    else
+        os << "Default";
+    return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os, TColorAttr attr)
+{
+    os << "{" << attr.getForeground() << ", " << attr.getBackground();
+    if (attr.getStyle())
+        os << ", " << attr.getStyle();
+    os << "}";
+    return os;
+}
 
 inline bool operator==(const TEvent &a, const TEvent &b)
 {
@@ -83,7 +108,7 @@ inline std::ostream &operator<<(std::ostream &os, TPoint p)
     return os;
 }
 
-inline TEvent keyDownEv(ushort keyCode, ushort controlKeyState, TStringView text = {})
+inline TEvent keyDownEv(ushort keyCode, ushort controlKeyState = 0, TStringView text = {})
 {
     TEvent ev {};
     ev.what = evKeyDown;
@@ -106,6 +131,20 @@ inline TEvent mouseEv(TPoint where, ushort eventFlags, ushort controlKeyState, u
     ev.mouse.controlKeyState = controlKeyState;
     ev.mouse.buttons = buttons;
     ev.mouse.wheel = wheel;
+    return ev;
+}
+
+inline TEvent mouseDownEv(TPoint where, ushort eventFlags = 0, uchar buttons = mbLeftButton, ushort controlKeyState = 0, uchar wheel = 0)
+{
+    TEvent ev = mouseEv(where, eventFlags, controlKeyState, buttons, wheel);
+    ev.what = evMouseDown;
+    return ev;
+}
+
+inline TEvent mouseUpEv(TPoint where, uchar buttons = mbLeftButton, ushort controlKeyState = 0, uchar wheel = 0)
+{
+    TEvent ev = mouseEv(where, 0, controlKeyState, buttons, wheel);
+    ev.what = evMouseUp;
     return ev;
 }
 

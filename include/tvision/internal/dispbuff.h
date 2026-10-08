@@ -43,22 +43,21 @@ class DisplayBuffer
     bool cursorVisible {false};
     TColorAttr attrUnderCursor;
 
-    bool limitFPS;
+    uint maxFps;
     std::chrono::microseconds flushDelay {};
     TimePoint lastFlush {};
     TimePoint pendingFlush {};
 
 #ifdef _WIN32
-    static constexpr int defaultFPS = 120; // Just 60 feels notably slower on Windows, I don't know why.
+    enum { defaultFps = 120 }; // Just 60 feels notably slower on Windows, I don't know why.
 #else
-    static constexpr int defaultFPS = 60;
+    enum { defaultFps = 60 };
 #endif
 
     bool inBounds(int x, int y) const noexcept;
 
     void resizeBuffer() noexcept;
     void setDirty(int x, int y, int len) noexcept;
-    void validateCell(TScreenCell &cell) const noexcept;
 
     void drawCursor() noexcept;
     void undrawCursor() noexcept;
@@ -71,7 +70,7 @@ public:
     TPoint size {};
     int caretSize {-1};
 
-    DisplayBuffer() noexcept;
+    DisplayBuffer(int maxFps) noexcept;
 
     void reset() noexcept;
 
@@ -91,8 +90,9 @@ public:
 
 inline void DisplayBuffer::reset() noexcept
 {
+    int maxFps = this->maxFps;
     this->~DisplayBuffer();
-    new (this) DisplayBuffer;
+    new (this) DisplayBuffer(maxFps);
 }
 
 inline bool DisplayBuffer::inBounds(int x, int y) const noexcept

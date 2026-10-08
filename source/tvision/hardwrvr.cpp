@@ -162,6 +162,12 @@ THardwareInfo::THardwareInfo()
 
     consoleMode |= ENABLE_WINDOW_INPUT; // Report changes in buffer size
     consoleMode &= ~ENABLE_PROCESSED_INPUT; // Report CTRL+C and SHIFT+Arrow events.
+    consoleMode &= ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT); // Report Ctrl+S.
+    SetConsoleMode( consoleHandle[cnInput], consoleMode );
+    // The following flags were introduced in later Windows versions, so use a
+    // separate call to SetConsoleMode, just in case it fails.
+    consoleMode |= ENABLE_EXTENDED_FLAGS;   /* Disable the Quick Edit mode, */
+    consoleMode &= ~ENABLE_QUICK_EDIT_MODE; /* which inhibits the mouse.    */
     SetConsoleMode( consoleHandle[cnInput], consoleMode );
 
     pSetConsoleActiveScreenBuffer =
@@ -273,13 +279,13 @@ void THardwareInfo::setCaretSize( ushort size )
     SetConsoleCursorInfo( consoleHandle[cnOutput], &crInfo );
 }
 
-void THardwareInfo::screenWrite( ushort x, ushort y, ushort *buf, DWORD len )
+void THardwareInfo::screenWrite( ushort x, ushort y, CHAR_INFO *buf, DWORD len )
 {
     COORD size = {len,1};
     COORD from = {0,0};
     SMALL_RECT to = {x,y,x+len-1,y};
 
-    WriteConsoleOutput( consoleHandle[cnOutput], (CHAR_INFO *) buf, size, from, &to);
+    WriteConsoleOutput( consoleHandle[cnOutput], buf, size, from, &to);
 }
 
 // Event functions.

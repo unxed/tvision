@@ -7,10 +7,10 @@ jobs:
     name: Linux (GCC) (Unity)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Install Dependencies
-      run: sudo apt-get -y install libgpm-dev libgtest-dev
+      run: sudo apt-get -y --no-install-recommends install libgpm-dev libgtest-dev
 
     - name: Configure CMake
       shell: bash
@@ -24,7 +24,7 @@ jobs:
     name: Linux (GCC 5)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Install Dependencies
       run: |
@@ -35,7 +35,7 @@ jobs:
         EOF
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32
         sudo apt-get update
-        sudo apt-get -y install g++-5
+        sudo apt-get -y --no-install-recommends install g++-5
 
     - name: Configure CMake
       shell: bash
@@ -52,10 +52,10 @@ jobs:
     name: Linux (Clang)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Install Dependencies
-      run: sudo apt-get -y install libncursesw5-dev
+      run: sudo apt-get -y --no-install-recommends install libncursesw5-dev
 
     - name: Configure CMake
       shell: bash
@@ -72,10 +72,10 @@ jobs:
     name: Linux (GCC) (Big Endian)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Build in container
-      uses: uraimo/run-on-arch-action@v2
+      uses: uraimo/run-on-arch-action@v3
       with:
         arch: s390x
         distro: alpine_latest
@@ -94,7 +94,7 @@ jobs:
     name: Windows (MSVC) (Win32)
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Configure CMake
       shell: bash
@@ -113,7 +113,7 @@ jobs:
       run: cmake --build . --config Debug --target tvision -- -p:UseMultiToolTask=true -p:CL_MPcount=$(nproc)
 
     - name: Upload Examples
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: examples-x86
         path: |
@@ -122,7 +122,7 @@ jobs:
           Release/tvhc.exe
 
     - name: Upload Library
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: library-x86
         path: |
@@ -136,7 +136,7 @@ jobs:
     name: Windows (MSVC) (x64)
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Configure CMake
       shell: bash
@@ -155,7 +155,7 @@ jobs:
       run: cmake --build . --config Debug --target tvision -- -p:UseMultiToolTask=true -p:CL_MPcount=$(nproc)
 
     - name: Upload Examples
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: examples-x64
         path: |
@@ -164,7 +164,7 @@ jobs:
           Release/tvhc.exe
 
     - name: Upload Library
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: library-x64
         path: |
@@ -178,7 +178,7 @@ jobs:
     name: Windows (MinGW)
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Configure CMake
       shell: bash
@@ -192,15 +192,17 @@ jobs:
     name: Windows (BCC32) (DPMI32)
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Install Build Tools
       shell: bash
       run: |
-        curl -LJO "https://github.com/magiblot/tvision/files/5578778/BC45-32.zip"
-        curl -LJO "https://github.com/magiblot/tvision/files/5578815/tasm4-32.zip"
-        unzip BC45-32.zip -d C:/BC45
-        unzip tasm4-32.zip -d C:/tasm
+        curl -LJO "https://github.com/user-attachments/files/31184465/bc45-ci.zip"
+        curl -LJO "https://github.com/user-attachments/files/31184581/tasm4-ci.zip"
+        curl -LJO "https://github.com/user-attachments/files/31240466/bc55-make.zip"
+        unzip bc45-ci.zip -d C:/bc45
+        unzip tasm4-ci.zip -d C:/tasm
+        unzip -o bc55-make.zip -d C:/bc45/bin
 
     - name: Build
       shell: bash
@@ -210,30 +212,84 @@ jobs:
         /c/bc45/bin/make.exe -DDOS32
 
     - name: Upload Examples
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
-        name: examples-dos32
+        name: examples-dpmi32
         path: |
           examples/tvdemo/tvdemo.EXE
           examples/tvedit/tvedit.EXE
           examples/tvhc/tvhc.EXE
 
     - name: Upload Library
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
-        name: library-dos32
+        name: library-dpmi32
         path: |
           LIB/TV32.LIB
+
+  build-dos-bcc:
+    name: DOS (BCC)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Install Build Tools
+      run: |
+        sudo add-apt-repository -y ppa:dosemu2/ppa
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends dosemu2
+        curl -LJO "https://github.com/user-attachments/files/31184465/bc45-ci.zip"
+        curl -LJO "https://github.com/user-attachments/files/31184581/tasm4-ci.zip"
+        unzip bc45-ci.zip -d bc45
+        unzip tasm4-ci.zip -d tasm
+
+    - name: Build
+      run: |
+        cat > run.bat << EOF
+          C:
+          CD C:\project
+          SET PATH=C:\bc45\bin;C:\tasm\bin
+          MAKER.EXE
+        EOF
+        sed -i 's/$/\r/' run.bat
+
+        cat > dosemu.conf << 'EOF'
+          $_cpu_vm = "emulated"
+          $_cpu_vm_dpmi = "emulated"
+          $_layout = "us"
+          $_sound = (off)
+        EOF
+
+        dosemu -n -t -ks -f dosemu.conf --Fdrive_c "$PWD" -E 'C:\run.bat'
+
+    - name: Upload Examples
+      uses: actions/upload-artifact@v7
+      with:
+        name: examples-dos
+        path: |
+          examples/tvdemo/tvdemo.exe
+          examples/tvedit/tvedit.exe
+          examples/tvhc/tvhc.exe
+
+    - name: Upload Library
+      uses: actions/upload-artifact@v7
+      with:
+        name: library-dos
+        path: |
+          LIB/tv.lib
 
   build-macos-clang:
     name: MacOS (Clang)
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
+
+    - name: Install Dependencies
+      run: brew install googletest
 
     - name: Configure CMake
       shell: bash
-      run: cmake . -DCMAKE_BUILD_TYPE=Release
+      run: cmake . -DCMAKE_BUILD_TYPE=Release -DTV_BUILD_TESTS=ON
 
     - name: Build
       shell: bash

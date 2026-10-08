@@ -21,7 +21,7 @@ TEST(TermIO, ShouldNormalizeKeys)
         {keyDownEv(kbIns, kbShift), keyDownEv(kbShiftIns, kbShift)},
         {keyDownEv(kbBack, kbLeftCtrl | kbLeftAlt), keyDownEv(kbAltBack, kbLeftCtrl | kbLeftAlt)},
         {keyDownEv(kbCtrlBack, kbRightCtrl), keyDownEv(kbCtrlBack, kbRightCtrl)},
-        {keyDownEv(kbCtrlBack, 0x0000), keyDownEv(kbCtrlBack, kbLeftCtrl)},
+        {keyDownEv(kbCtrlBack), keyDownEv(kbCtrlBack, kbLeftCtrl)},
         {keyDownEv(kbIns, kbLeftCtrl | kbEnhanced), keyDownEv(kbCtrlIns, kbLeftCtrl | kbEnhanced)},
         {keyDownEv(kbCtrlDel, kbLeftAlt), keyDownEv(kbAltDel, kbLeftCtrl | kbLeftAlt)},
     };
@@ -46,6 +46,8 @@ TEST(TermIO, ShouldReadWin32InputModeKeys)
         {"\x1B[112;59;0;1;8;1_", {keyDownEv(kbCtrlF1, kbLeftCtrl)}},
         {"\x1B[112;59;;1;8_", {keyDownEv(kbCtrlF1, kbLeftCtrl)}},
         {"\x1B[112;59;0;0;8;1_", {}},
+        // Zeroed scan code
+        {"\x1B[65;0;65;1;16;1_", {keyDownEv(0x1e41, kbShift, "A")}},
         // https://github.com/microsoft/terminal/issues/15083
         { // SGR mouse event
             "\x1B[0;0;27;1;0;1_" // \x1B[<0;52;12M
@@ -166,19 +168,19 @@ TEST(TermIO, ShouldReadKittyKeys)
         // ф + Shift + Alt (RU)
         {"\x1B[1092:1060:97;4u", {keyDownEv(kbAltA, kbShift | kbLeftAlt, "Ф")}},
         // Right
-        {"\x1B[C", {keyDownEv(kbRight, 0x0000)}},
+        {"\x1B[C", {keyDownEv(kbRight)}},
         // F2
-        {"\x1B[Q", {keyDownEv(kbF2, 0x0000)}},
+        {"\x1B[Q", {keyDownEv(kbF2)}},
         // F3
-        {"\x1B[13~", {keyDownEv(kbF3, 0x0000)}},
+        {"\x1B[13~", {keyDownEv(kbF3)}},
         // Del
-        {"\x1B[3~", {keyDownEv(kbDel, 0x0000)}},
+        {"\x1B[3~", {keyDownEv(kbDel)}},
         // Tab
-        {"\x1B[9u", {keyDownEv(kbTab, 0x0000)}},
+        {"\x1B[9u", {keyDownEv(kbTab)}},
         // Enter
-        {"\x1B[13u", {keyDownEv(kbEnter, 0x0000)}},
+        {"\x1B[13u", {keyDownEv(kbEnter)}},
         // Back
-        {"\x1B[127u", {keyDownEv(kbBack, 0x0000)}},
+        {"\x1B[127u", {keyDownEv(kbBack)}},
         // Space + Ctrl
         {"\x1B[32;5u", {keyDownEv(0x0020, kbLeftCtrl, " ")}},
         // Enter + Ctrl
