@@ -2,22 +2,31 @@
 /* filename -       dosutf8.cpp                                      */
 /*                                                                   */
 /* function(s)                                                       */
-/*          initDosUtf8 - asks the DOS for UTF-8 file names          */
+/*          initDosUtf8 - asks the DOS for UTF-8 long file names     */
 /*-------------------------------------------------------------------*/
 
-// DOS only (Borland C++). Elsewhere this file is empty.
+// DOS only (16-bit Borland C++). Elsewhere this file is empty.
 //
 // A DOS that provides the AMIS (INT 2Dh) extension "DOS-UTF8/NAMES" can give
-// and take the file names in UTF-8: every function of INT 21h that works on
-// long names (AH=71h) then returns and accepts UTF-8 for this process. This is
-// what DOSBox-X does since https://github.com/joncampbell123/dosbox-x/pull/6632
-// (the option "utf8 file names"), and what the DOS of go2dos does.
+// and take the long file names in UTF-8: every function of INT 21h that works
+// on long names (AH=71h) then returns and accepts UTF-8 for this process. This
+// is what DOSBox-X does since
+// https://github.com/joncampbell123/dosbox-x/pull/6632 (the option "utf8 file
+// names"), and what the DOS of go2dos does.
 //
-// The program asks for it once, at the start (the first TApplication).
-// Setting the environment variable TV_DOS_UTF8_NAMES=0 keeps the code page of
-// the DOS. A DOS without the provider is not affected in any way.
+// IMPORTANT: this only switches the mode of the DOS. Turbo Vision itself does
+// not call the long file name functions (findfirst, fexpand, getcurdir and the
+// stream classes use the Borland run-time library, which uses the short 8.3
+// names of INT 21h AH=4Eh and others), and the DOS text screen and TText work
+// with one byte per character in the OEM code page. The mode is therefore only
+// useful for a program that calls INT 21h AH=71h itself and converts the names.
+// For this reason it is off by default and enabled by the environment variable
+// TV_DOS_UTF8_NAMES=1. A DOS without the provider is not affected in any way.
+//
+// No function here is declared 'noexcept' on purpose: this file does not
+// include <tvision/tv.h>, which defines 'noexcept' away for Borland C++.
 
-#if defined( __BORLANDC__ ) && defined( __MSDOS__ )
+#if defined( __BORLANDC__ ) && defined( __MSDOS__ ) && !defined( __FLAT__ )
 
 #include <dos.h>
 #include <stdlib.h>
@@ -28,10 +37,10 @@ namespace
 
 const unsigned utf8CodePage = 65001;
 
-// Reads 16 bytes at the real mode address seg:off.
-static bool readRealMode( unsigned seg, unsigned off, char (&buf)[16] ) noexcept
+// Reads the 16 bytes at the real mode address seg:off.
+static bool readRealMode( unsigned seg, unsigned off, char *buf )
 {
-#if defined( __DPMI32__ ) || defined( __DPMI16__ )
+#if defined( __DPMI16__ )
     // DPMI function 0002h: a selector for a real mode segment.
     union REGS r;
     r.x.ax = 0x0002;
@@ -40,18 +49,16 @@ static bool readRealMode( unsigned seg, unsigned off, char (&buf)[16] ) noexcept
     if( r.x.cflag )
         return false;
     const char far *p = (const char far *) MK_FP( r.x.ax, off );
-    memcpy( buf, p, 16 );
-    return true;
 #else
     const char far *p = (const char far *) MK_FP( seg, off );
+#endif
     memcpy( buf, p, 16 );
     return true;
-#endif
 }
 
 // Looks for the AMIS provider whose signature (manufacturer and product, 8
 // characters each) is sig. Returns the multiplex number or -1.
-static int amisFind( const char (&sig)[16] ) noexcept
+static int amisFind( const char *sig )
 {
     for( int mux = 0; mux < 256; ++mux )
     {
@@ -68,7 +75,7 @@ static int amisFind( const char (&sig)[16] ) noexcept
 }
 
 // Function 10h: sets the encoding of this process; function 11h reads it back.
-static bool amisSetEncoding( int mux, unsigned encoding ) noexcept
+static bool amisSetEncoding( int mux, unsigned encoding )
 {
     union REGS r;
     r.x.ax = ((unsigned) mux << 8) | 0x10;
@@ -83,14 +90,14 @@ static bool amisSetEncoding( int mux, unsigned encoding ) noexcept
 
 } // namespace
 
-void initDosUtf8() noexcept
+void initDosUtf8()
 {
     static bool done = false;
     if( done )
         return;
     done = true;
     const char *env = getenv( "TV_DOS_UTF8_NAMES" );
-    if( env && env[0] == '0' )
+    if( env == 0 || env[0] != '1' )
         return;
     static const char sig[16] =
         { 'D','O','S','-','U','T','F','8', 'N','A','M','E','S',' ',' ',' ' };
@@ -101,6 +108,6 @@ void initDosUtf8() noexcept
 
 #else
 
-void initDosUtf8() noexcept {}
+void initDosUtf8() {}
 
 #endif

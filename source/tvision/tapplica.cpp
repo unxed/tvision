@@ -27,7 +27,7 @@
 
 void initHistory();
 void doneHistory();
-void initDosUtf8() noexcept;
+void initDosUtf8();
 
 TAppInit::TAppInit() noexcept
 {
