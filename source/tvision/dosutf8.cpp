@@ -25,6 +25,10 @@
 //
 // No function here is declared 'noexcept' on purpose: this file does not
 // include <tvision/tv.h>, which defines 'noexcept' away for Borland C++.
+// Borland C++ 4.5 has no 'bool' type (hence the Boolean enum in
+// <tvision/ttypes.h>), so the helpers return int; and, like the rest of the
+// library, they are file-local through 'static' rather than an unnamed
+// namespace.
 
 #if defined( __BORLANDC__ ) && defined( __MSDOS__ ) && !defined( __FLAT__ )
 
@@ -32,13 +36,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-namespace
-{
-
-const unsigned utf8CodePage = 65001;
+static const unsigned utf8CodePage = 65001;
 
 // Reads the 16 bytes at the real mode address seg:off.
-static bool readRealMode( unsigned seg, unsigned off, char *buf )
+static int readRealMode( unsigned seg, unsigned off, char *buf )
 {
 #if defined( __DPMI16__ )
     // DPMI function 0002h: a selector for a real mode segment.
@@ -47,13 +48,13 @@ static bool readRealMode( unsigned seg, unsigned off, char *buf )
     r.x.bx = seg;
     int86( 0x31, &r, &r );
     if( r.x.cflag )
-        return false;
+        return 0;
     const char far *p = (const char far *) MK_FP( r.x.ax, off );
 #else
     const char far *p = (const char far *) MK_FP( seg, off );
 #endif
     memcpy( buf, p, 16 );
-    return true;
+    return 1;
 }
 
 // Looks for the AMIS provider whose signature (manufacturer and product, 8
@@ -75,27 +76,25 @@ static int amisFind( const char *sig )
 }
 
 // Function 10h: sets the encoding of this process; function 11h reads it back.
-static bool amisSetEncoding( int mux, unsigned encoding )
+static int amisSetEncoding( int mux, unsigned encoding )
 {
     union REGS r;
     r.x.ax = ((unsigned) mux << 8) | 0x10;
     r.x.bx = encoding;
     int86( 0x2D, &r, &r );
     if( r.h.al != 0xFF )
-        return false;
+        return 0;
     r.x.ax = ((unsigned) mux << 8) | 0x11;
     int86( 0x2D, &r, &r );
     return r.h.al == 0xFF && r.x.bx == encoding;
 }
 
-} // namespace
-
 void initDosUtf8()
 {
-    static bool done = false;
+    static int done = 0;
     if( done )
         return;
-    done = true;
+    done = 1;
     const char *env = getenv( "TV_DOS_UTF8_NAMES" );
     if( env == 0 || env[0] != '1' )
         return;
